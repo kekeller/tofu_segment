@@ -1,8 +1,9 @@
 from sklearn.ensemble import RandomForestClassifier
 import glob
-from skimage import io,img_as_uint
+from skimage import io,img_as_uint, img_as_float
 from sklearn.neural_network import MLPClassifier
 import numpy as np
+from sklearn.neural_network import MLPClassifier
 
 # return a list of images 
 def read_data(path):
@@ -34,9 +35,11 @@ def read_data(path):
 	train = []
 	for im in label_list:
 		x = io.imread(im)
+		x = img_as_float(x)
 		label.append(x.flatten()) 
 	for im in train_list:
 		x = io.imread(im)
+		x = img_as_float(x)
 		train.append(x.flatten())
 
 	return train,label
@@ -47,23 +50,21 @@ def convert_label_mask(labels):
 	for label in labels:
 		m = []
 		for x in label:
-			if x > 150:
-				m.append(np.uint8(255))
+			if x > 0.5:
+				m.append(1.0)
 			else:
-				m.append(np.uint8(0))
+				m.append(0.0)
 
 		m = np.array(m)
 		m = m.reshape(250,250,3)
-
 		x = []
 		for row in m:
 			for indx, pixel in enumerate(row):
 				if np.mean(pixel) > 0:
-					x = [np.uint8(255),np.uint8(255),np.uint8(255)]
+					x = [pixel[0],pixel[0],pixel[0]]
 					x = np.array(x)
 					row[indx] = x
 		mask.append(m.flatten())
-		io.imsave("mask.tif",m.reshape(250,250,3))
 	return mask
 
 #train,label = read_data("./images")
@@ -113,21 +114,45 @@ def fake_data():
 	io.imsave("white.tif",white)
 	return green,white,mask
 
-green,white,mask = fake_data()
-x = []
-x.append(green.flatten())
-x.append(white.flatten())
-y = []
-y.append(mask.flatten())
-y.append(white.flatten())
-test = []
-test.append(white.flatten())
+train,label = read_data("./images")
+mask = convert_label_mask(label)
 
-clf = RandomForestClassifier(verbose=1)
+train_validate,label_validate = read_data("./predict")
+mask_validate = convert_label_mask(label_validate)
+
+x = train
+y = mask
+
+y_pred = train_validate
+
+print(len(x))
+print(len(y))
+print(len(y_pred))
+
+#clf = RandomForestClassifier(verbose=1)
+clf = MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(5, 2), random_state=1)
 clf.fit(x,y)
 print(clf)
-pred = clf.predict(test)
+pred = clf.predict(y_pred)
 print(pred)
+
+io.imsave("out.tif", img_as_uint(pred.reshape(250,250,3)))
+
+#,white,mask = fake_data()
+#x = []
+#x.append(green.flatten())
+#x.append(white.flatten())
+#y = []
+#y.append(mask.flatten())
+#y.append(white.flatten())
+#test = []
+#test.append(white.flatten())
+
+#clf = RandomForestClassifier(verbose=1)
+#clf.fit(x,y)
+#print(clf)
+#pred = clf.predict(test)
+#print(pred)
 
 # clf.fit(train, mask)
 # pred = clf.predict(train_validate)
