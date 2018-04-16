@@ -67,12 +67,6 @@ def convert_label_mask(labels):
 		mask.append(m.flatten())
 	return mask
 
-#train,label = read_data("./images")
-#mask = convert_label_mask(label)
-
-#train_validate,label_validate = read_data("./predict")
-#mask_validate = convert_label_mask(label_validate)
-
 def fake_images_green():
 	im = np.linspace(0, 1., (250*250*3)).reshape(250,250,3)
 	for row in im:
@@ -114,61 +108,44 @@ def fake_data():
 	io.imsave("white.tif",white)
 	return green,white,mask
 
+def fake_model():
+	green,white,mask = fake_data()
+	x = []
+	x.append(green.flatten())
+	x.append(white.flatten())
+	y = []
+	y.append(mask.flatten())
+	y.append(white.flatten())
+	test = []
+	test.append(white.flatten())
+
+	clf = RandomForestClassifier(verbose=1)
+	clf.fit(x,y)
+	print(clf)
+	pred = clf.predict(test)
+	print(pred)
+
+
 train,label = read_data("./images")
 mask = convert_label_mask(label)
 
 train_validate,label_validate = read_data("./predict")
 mask_validate = convert_label_mask(label_validate)
 
-x = train
-y = mask
+x_train = train
+y_train = mask
+y_test = train_validate
+y_true = mask_validate
 
-y_pred = train_validate
-
-print(len(x))
-print(len(y))
-print(len(y_pred))
-
-#clf = RandomForestClassifier(verbose=1)
-clf = MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(5, 2), random_state=1)
-clf.fit(x,y)
+clf = RandomForestClassifier(verbose=1)
+clf.fit(x_train,y_train)
 print(clf)
-pred = clf.predict(y_pred)
+pred = clf.predict(y_test)
 print(pred)
 
-io.imsave("out.tif", img_as_uint(pred.reshape(250,250,3)))
+y_pred = convert_label_mask(pred)
 
-#,white,mask = fake_data()
-#x = []
-#x.append(green.flatten())
-#x.append(white.flatten())
-#y = []
-#y.append(mask.flatten())
-#y.append(white.flatten())
-#test = []
-#test.append(white.flatten())
+from sklearn.metrics import mean_squared_error
+print(mean_squared_error(y_true,y_pred))
 
-#clf = RandomForestClassifier(verbose=1)
-#clf.fit(x,y)
-#print(clf)
-#pred = clf.predict(test)
-#print(pred)
-
-# clf.fit(train, mask)
-# pred = clf.predict(train_validate)
-# pred = np.array(pred)
-# pred= pred.reshape(250,250,3)
-
-# print(np.mean(pred))
-# x = []
-# for row in pred:
-# 	for indx, pixel in enumerate(row):
-# 			x = [np.uint8(pixel[0]),np.uint8(pixel[1]),np.uint8(pixel[2])]
-# 			x = np.array(x)
-# 			row[indx] = x
-
-# pred = pred.astype(int)
-# print(np.mean(pred))
-
-# io.imsave("training_image.tif",train_validate[0].reshape(250,250,3))
-# io.imsave("output.tif",pred)
+io.imsave("out_pred.tif", img_as_uint(pred.reshape(250,250,3)))
