@@ -1,151 +1,77 @@
 from sklearn.ensemble import RandomForestClassifier
 import glob
 from skimage import io,img_as_uint, img_as_float
-from sklearn.neural_network import MLPClassifier
 import numpy as np
-from sklearn.neural_network import MLPClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score,mean_squared_error
+from sklearn.externals import joblib
+
 
 # return a list of images 
-def read_data(path):
-	images = glob.glob(path + "/*.tif")
+def read_data(imgDir, maskDir):
+	images = glob.glob(imgDir + "*.tif")
+	masks = glob.glob(maskDir + "*.png")
 
 	train = []
 	label = []
+
 	for im in images:
-		if "train" in im:
-			label.append(im)
-		if "train" not in im and "image" in im:
-			train.append(im)
+		n = im.replace(imgDir,'')
+		n = n.replace('.tif','')
+		train.append(n)
 
-	# order images in set
+	for mask in masks:
+		n = mask.replace(maskDir,'')
+		n = n.replace('.png','')
+		label.append(n)
+
+	if ( set(label) == set(train)):
+		print("each image has mask")
+
 	x = []
-	for i in range(1,len(train)+1):
-		for im in train:
-			if "_"+str(i)+"." in im:
-				x.append(im)
-	train_list = x
-	x = []
-	for i in range(1,len(label)+1):
-		for im in label:
-			if "_"+str(i)+"." in im:
-				x.append(im)
-	label_list = x
-
-	label  = []
-	train = []
-	for im in label_list:
-		x = io.imread(im)
-		x = img_as_float(x)
-		label.append(x.flatten()) 
-	for im in train_list:
-		x = io.imread(im)
-		x = img_as_float(x)
-		train.append(x.flatten())
-
-	return train,label
-
-# return a black and white mask
-def convert_label_mask(labels):
-	mask = []
-	for label in labels:
-		m = []
-		for x in label:
-			if x > 0.5:
-				m.append(1.0)
-			else:
-				m.append(0.0)
-
-		m = np.array(m)
-		m = m.reshape(250,250,3)
-		x = []
-		for row in m:
-			for indx, pixel in enumerate(row):
-				if np.mean(pixel) > 0:
-					x = [pixel[0],pixel[0],pixel[0]]
-					x = np.array(x)
-					row[indx] = x
-		mask.append(m.flatten())
-	return mask
-
-def fake_images_green():
-	im = np.linspace(0, 1., (250*250*3)).reshape(250,250,3)
-	for row in im:
-		for indx, pixel in enumerate(row):
-			x = (0,1.0,0.255) # set to green
-			x = np.array(x)
-			row[indx] = x
-
-	im = img_as_uint(im)
-	return im
-
-def fake_images_white():
-	im = np.linspace(0, 1., (250*250*3)).reshape(250,250,3)
-	for row in im:
-		for indx, pixel in enumerate(row):
-			x = (1,1,1) 
-			x = np.array(x)
-			row[indx] = x
-
-	im = img_as_uint(im)
-	return im
-
-def fake_images_mask():
-	im = np.linspace(0, 1., (250*250*3)).reshape(250,250,3)
-	for row in im:
-		for indx, pixel in enumerate(row):
-			x = (0,0,0) 
-			x = np.array(x)
-			row[indx] = x
-
-	im = img_as_uint(im)
-	return im
-
-def fake_data():
-	green = fake_images_green()
-	white = fake_images_white()
-	mask = fake_images_mask()
-	io.imsave("green.tif",green)
-	io.imsave("white.tif",white)
-	return green,white,mask
-
-def fake_model():
-	green,white,mask = fake_data()
-	x = []
-	x.append(green.flatten())
-	x.append(white.flatten())
 	y = []
-	y.append(mask.flatten())
-	y.append(white.flatten())
-	test = []
-	test.append(white.flatten())
+	for i in range(len(train)):
+		name = imgDir + str(train[i]) + '.tif'
+		x.append( img_as_float(io.imread(name).flatten() ) )
 
-	clf = RandomForestClassifier(verbose=1)
-	clf.fit(x,y)
-	print(clf)
-	pred = clf.predict(test)
-	print(pred)
+		name = maskDir + str(train[i]) + '.png'
+		mask =  io.imread(name).flatten() 
+		mask = np.where(mask > 0.5, 1, 0) # convert to binary target pixel values
+		y.append(mask)
+
+	return x,y
+
+def train_model(train_x,train_y):
+	print("start train model")
+	# Create random forest classifier instance
+	trained_model = RandomForestClassifier(verbose=1)
+	trained_model.fit(train_x, train_y)
+	print("Trained model :: " +str(trained_model) )
+
+	s = joblib.dump(trained_model, 'model.pkl') 
+	print("model saved")
+
+def pred_model(train_x, test_x, train_y, test_y):
+	trained_model = joblib.load('model.pkl')
+	predictions = trained_model.predict(test_x)
+
+	print("Test mean squared error :: " + str(mean_squared_error(test_y,predictions)) )
+	
+	for i in range(len(predictions)):
+		io.imsave(str(i) + "_out_pred.tif", img_as_uint(predictions[i].reshape(256,256,1)))
+		io.imsave(str(i) + "_out_img.tif", img_as_uint(test_x[i].reshape(256,256,3)))
 
 
-train,label = read_data("./images")
-mask = convert_label_mask(label)
+## load data
+imgDir = './data/train_images/'
+maskDir = './data/train_masks/'
+# train_x,train_y = read_data(imgDir, maskDir)
 
-train_validate,label_validate = read_data("./predict")
-mask_validate = convert_label_mask(label_validate)
+# imgDir = './data/validate_images/'
+# maskDir = './data/validate_masks/'
+# test_x, test_y = read_data(imgDir, maskDir)
+x,y = read_data(imgDir, maskDir)
+train_x,test_x,train_y,test_y = train_test_split(x,y)
 
-x_train = train
-y_train = mask
-y_test = train_validate
-y_true = mask_validate
-
-clf = RandomForestClassifier(verbose=1)
-clf.fit(x_train,y_train)
-print(clf)
-pred = clf.predict(y_test)
-print(pred)
-
-y_pred = convert_label_mask(pred)
-
-from sklearn.metrics import mean_squared_error
-print(mean_squared_error(y_true,y_pred))
-
-io.imsave("out_pred.tif", img_as_uint(pred.reshape(250,250,3)))
+train_model(train_x,train_y)
+pred_model(train_x, test_x, train_y, test_y)
