@@ -51,8 +51,10 @@ def train_model(train_x,train_y):
 	s = joblib.dump(trained_model, 'model.pkl') 
 	print("model saved")
 
-def pred_model(train_x, test_x, train_y, test_y):
+def pred_model(test_x, test_y):
+	print("start predict")
 	trained_model = joblib.load('model.pkl')
+	print("model loaded")
 	predictions = trained_model.predict(test_x)
 
 	print("Test mean squared error :: " + str(mean_squared_error(test_y,predictions)) )
@@ -65,13 +67,15 @@ def pred_model(train_x, test_x, train_y, test_y):
 ## load data
 imgDir = './data/train_images/'
 maskDir = './data/train_masks/'
-# train_x,train_y = read_data(imgDir, maskDir)
 
-# imgDir = './data/validate_images/'
-# maskDir = './data/validate_masks/'
-# test_x, test_y = read_data(imgDir, maskDir)
-x,y = read_data(imgDir, maskDir)
-train_x,test_x,train_y,test_y = train_test_split(x,y)
+imgValDir = './data/validate_images/'
+maskValDir = './data/validate_masks/'
+
+train_x,train_y = read_data(imgDir, maskDir)
+test_x, test_y = read_data(imgValDir, maskValDir)
+
+print("train set: " + str(len(train_x)))
+print("test set: " + str(len(test_x)))
 
 train_model(train_x,train_y)
-pred_model(train_x, test_x, train_y, test_y)
+pred_model(test_x, test_y)
