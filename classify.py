@@ -28,6 +28,12 @@ def read_data(imgDir, maskDir):
 	if ( set(label) == set(train)):
 		print("each image has mask")
 
+	file = open('training.txt',"w")
+	for name in label:
+		file.write(imgDir + name + ".tif ")
+		file.write(maskDir + name + ".png\n")
+
+
 	x = []
 	y = []
 	for i in range(len(train)):
@@ -52,7 +58,7 @@ def train_model(train_x,train_y):
 	print("model saved")
 
 def pred_model(test_x, test_y):
-	print("start predict")
+	print("start load model")
 	trained_model = joblib.load('model.pkl')
 	print("model loaded")
 	predictions = trained_model.predict(test_x)
@@ -72,10 +78,10 @@ imgValDir = './data/validate_images/'
 maskValDir = './data/validate_masks/'
 
 train_x,train_y = read_data(imgDir, maskDir)
-test_x, test_y = read_data(imgValDir, maskValDir)
+#test_x, test_y = read_data(imgValDir, maskValDir)
 
 print("train set: " + str(len(train_x)))
-print("test set: " + str(len(test_x)))
+#print("test set: " + str(len(test_x)))
 
-train_model(train_x,train_y)
-pred_model(test_x, test_y)
+#train_model(train_x,train_y)
+#pred_model(test_x, test_y)

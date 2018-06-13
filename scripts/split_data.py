@@ -1,10 +1,10 @@
 import glob, random, shutil, os
 
-imgDir = './data/train_images/'
-maskDir = './data/train_masks/'
+imgDir =  '/home/kevin/Documents/Data_Set/LabeledData/augmented_data/train_images/' #'./data/train_images/'
+maskDir =  '/home/kevin/Documents/Data_Set/LabeledData/augmented_data/train_masks/'  #'./data/train_masks/'
 
-valImgDir = './data/validate_images/'
-valMaskDir = './data/validate_masks/'
+valImgDir = '/home/kevin/Documents/Data_Set/LabeledData/augmented_data/validate_images/' #'./data/validate_images/'
+valMaskDir = '/home/kevin/Documents/Data_Set/LabeledData/augmented_data/validate_masks/'  #'./data/validate_masks/'
 
 images = glob.glob(imgDir + "*.tif")
 masks = glob.glob(maskDir + "*.png")
@@ -36,7 +36,7 @@ for i in range(len(train)):
 
 print(len(x))
 
-valImg = random.sample(x,100)
+valImg = random.sample(x,45)
 
 for img in valImg:
 	nameImg = img
