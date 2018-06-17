@@ -3,7 +3,7 @@ import glob
 from skimage import io,img_as_uint, img_as_float
 import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score,mean_squared_error
+from sklearn.metrics import accuracy_score,mean_squared_error, jaccard_similarity_score
 from sklearn.externals import joblib
 
 
@@ -62,8 +62,23 @@ def pred_model(test_x, test_y):
 	trained_model = joblib.load('model.pkl')
 	print("model loaded")
 	predictions = trained_model.predict(test_x)
+	print(predictions)
+	print(test_y)
 
-	print("Test mean squared error :: " + str(mean_squared_error(test_y,predictions)) )
+	pred = []
+
+	for p in predictions:
+		pred.append(np.array(p,dtype=int))
+
+	miou = 0
+	for i in range(len(pred)):
+		miou = miou + jaccard_similarity_score(test_y[i], pred[i], normalize = True) 
+
+	print(miou)
+	miou = miou / len(pred)
+	print(miou)
+	#print("Test mean squared error :: " + str(mean_squared_error(test_y,predictions)) )
+	print("mIOU :: " + str(miou))
 	
 	for i in range(len(predictions)):
 		io.imsave(str(i) + "_out_pred.tif", img_as_uint(predictions[i].reshape(256,256,1)))
@@ -71,17 +86,17 @@ def pred_model(test_x, test_y):
 
 
 ## load data
-imgDir = './data/train_images/'
-maskDir = './data/train_masks/'
+imgDir = './data_small/train_images/'
+maskDir = './data_small/train_masks/'
 
-imgValDir = './data/validate_images/'
-maskValDir = './data/validate_masks/'
+imgValDir = './data_small/validate_images/'
+maskValDir = './data_small/validate_masks/'
 
 train_x,train_y = read_data(imgDir, maskDir)
-#test_x, test_y = read_data(imgValDir, maskValDir)
+test_x, test_y = read_data(imgValDir, maskValDir)
 
 print("train set: " + str(len(train_x)))
-#print("test set: " + str(len(test_x)))
+print("test set: " + str(len(test_x)))
 
 #train_model(train_x,train_y)
-#pred_model(test_x, test_y)
+pred_model(test_x, test_y)
