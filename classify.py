@@ -9,7 +9,7 @@ from sklearn.externals import joblib
 
 # return a list of images 
 def read_data(imgDir, maskDir):
-	images = glob.glob(imgDir + "*.tif")
+	images = glob.glob(imgDir + "*.jpg")
 	masks = glob.glob(maskDir + "*.png")
 
 	train = []
@@ -17,7 +17,7 @@ def read_data(imgDir, maskDir):
 
 	for im in images:
 		n = im.replace(imgDir,'')
-		n = n.replace('.tif','')
+		n = n.replace('.jpg','')
 		train.append(n)
 
 	for mask in masks:
@@ -30,14 +30,14 @@ def read_data(imgDir, maskDir):
 
 	file = open('training.txt',"w")
 	for name in label:
-		file.write(imgDir + name + ".tif ")
+		file.write(imgDir + name + ".jpg ")
 		file.write(maskDir + name + ".png\n")
 
 
 	x = []
 	y = []
 	for i in range(len(train)):
-		name = imgDir + str(train[i]) + '.tif'
+		name = imgDir + str(train[i]) + '.jpg'
 		x.append( img_as_float(io.imread(name).flatten() ) )
 
 		name = maskDir + str(train[i]) + '.png'
@@ -54,7 +54,7 @@ def train_model(train_x,train_y):
 	trained_model.fit(train_x, train_y)
 	print("Trained model :: " +str(trained_model) )
 
-	s = joblib.dump(trained_model, 'model.pkl') 
+	s = joblib.dump(trained_model, 'model.pkl',compress=9) 
 	print("model saved")
 
 def pred_model(test_x, test_y):
@@ -65,38 +65,42 @@ def pred_model(test_x, test_y):
 	print(predictions)
 	print(test_y)
 
-	pred = []
+        pred = []
 
-	for p in predictions:
-		pred.append(np.array(p,dtype=int))
+        for p in predictions:
+                pred.append(np.array(p,dtype=int))
 
-	miou = 0
-	for i in range(len(pred)):
-		miou = miou + jaccard_similarity_score(test_y[i], pred[i], normalize = True) 
+        miou = 0
+        for p,y in zip(pred,test_y):
+                miou = miou + cal_miou(p,y) #jaccard_similarity_score(p,y, normalize = True) 
 
-	print(miou)
-	miou = miou / len(pred)
-	print(miou)
-	#print("Test mean squared error :: " + str(mean_squared_error(test_y,predictions)) )
-	print("mIOU :: " + str(miou))
-	
-	for i in range(len(predictions)):
-		io.imsave(str(i) + "_out_pred.tif", img_as_uint(predictions[i].reshape(256,256,1)))
-		io.imsave(str(i) + "_out_img.tif", img_as_uint(test_x[i].reshape(256,256,3)))
+        miou = miou / len(pred)
+        #print("Test mean squared error :: " + str(mean_squared_error(test_y,predictions)) )
+        print("mIOU :: " + str(miou))
 
+        for i in range(len(predictions)):
+                io.imsave(str(i) + "_out_pred.tif", img_as_uint(predictions[i].reshape(256,256,1)))
+                io.imsave(str(i) + "_out_img.tif", img_as_uint(test_x[i].reshape(256,256,3)))
+
+
+def cal_miou(pred,val):
+        tn, fp, fn, tp = confusion_matrix(val,pred).ravel()
+
+        miou = tp / float(tp + fp + fn)
+        return miou
 
 ## load data
-imgDir = './data_small/train_images/'
-maskDir = './data_small/train_masks/'
+imgDir = './data/train_images/'
+maskDir = './data/train_masks/'
 
-imgValDir = './data_small/validate_images/'
-maskValDir = './data_small/validate_masks/'
+imgValDir = './data/validate_images/'
+maskValDir = './data/validate_masks/'
 
 train_x,train_y = read_data(imgDir, maskDir)
-test_x, test_y = read_data(imgValDir, maskValDir)
+#test_x, test_y = read_data(imgValDir, maskValDir)
 
 print("train set: " + str(len(train_x)))
 print("test set: " + str(len(test_x)))
 
-#train_model(train_x,train_y)
-pred_model(test_x, test_y)
+train_model(train_x,train_y)
+#pred_model(test_x, test_y)
